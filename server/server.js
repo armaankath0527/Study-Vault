@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import { connectDB } from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
@@ -19,7 +21,6 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 dotenv.config();
-await connectDB();
 
 const app = express();
 
@@ -42,8 +43,42 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
+// Serve static frontend assets in production
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.join(__dirname, "../client/dist");
+
+app.use(express.static(clientDistPath));
+
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+  res.sendFile(path.join(clientDistPath, "index.html"), (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`StudyVault API listening on port ${PORT}`));
+
+const startServer = async () => {
+  try {
+    if (process.env.MONGO_URI) {
+      await connectDB();
+    } else {
+      console.warn("Warning: MONGO_URI environment variable not set.");
+    }
+    app.listen(PORT, () => console.log(`StudyVault API listening on port ${PORT}`));
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  }
+};
+
+startServer();
+
