@@ -68,11 +68,7 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    if (process.env.MONGO_URI) {
-      await connectDB();
-    } else {
-      console.warn("Warning: MONGO_URI environment variable not set.");
-    }
+    await connectDB();
     app.listen(PORT, () => console.log(`StudyVault API listening on port ${PORT}`));
   } catch (err) {
     console.error("Failed to start server:", err);
